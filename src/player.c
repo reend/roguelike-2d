@@ -1,4 +1,5 @@
 #include "player.h"
+#include "combat.h"
 #include <stdlib.h>
 
 void InitPlayer(void) {
@@ -28,17 +29,20 @@ void MovePlayer(int dx, int dy) {
     int newY = (int)game.player.position.y + dy;
     
     if (CanMoveTo(newX, newY)) {
+        bool blocked = false;
         for (int i = 0; i < MAX_ENEMIES; i++) {
             if (game.enemies[i].active && 
                 (int)game.enemies[i].position.x == newX && 
                 (int)game.enemies[i].position.y == newY) {
-                AttackEnemy(i);
-                return;
+                blocked = true;
+                break;
             }
         }
         
-        game.player.position.x = newX;
-        game.player.position.y = newY;
+        if (!blocked) {
+            game.player.position.x = newX;
+            game.player.position.y = newY;
+        }
     }
 }
 
@@ -93,4 +97,6 @@ void HandlePlayerInput(void) {
     if (IsKeyPressed(KEY_RIGHT) || IsKeyPressed(KEY_D)) {
         MovePlayer(1, 0);
     }
+    
+    HandleMouseInput();
 }

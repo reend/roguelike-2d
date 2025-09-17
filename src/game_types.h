@@ -11,6 +11,8 @@
 #define MAP_HEIGHT 24
 #define MAX_ENEMIES 50
 #define MAX_ITEMS 100
+#define MAX_EFFECTS 100
+#define MAX_PROJECTILES 50
 
 #define TILE_FLOOR 0
 #define TILE_WALL 1
@@ -56,15 +58,41 @@ typedef struct {
 } Item;
 
 typedef struct {
+    Vector2f start;
+    Vector2f end;
+    Vector2f current;
+    float speed;
+    int damage;
+    int targetEnemyId;
+    float lifetime;
+    bool active;
+    Color color;
+} Projectile;
+
+typedef struct {
+    Vector2f position;
+    int type;
+    float lifetime;
+    float maxLifetime;
+    float size;
+    Color color;
+    bool active;
+} Effect;
+
+typedef struct {
     Player player;
     Enemy enemies[MAX_ENEMIES];
     Item items[MAX_ITEMS];
+    Projectile projectiles[MAX_PROJECTILES];
+    Effect effects[MAX_EFFECTS];
     int map[MAP_HEIGHT][MAP_WIDTH];
     int currentLevel;
     bool gameOver;
     float cameraX;
     float cameraY;
     Texture2D heroSprite;
+    int selectedEnemy;
+    bool isTargeting;
 } GameState;
 
 extern GameState game;
