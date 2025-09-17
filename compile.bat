@@ -1,5 +1,5 @@
 @echo off
-echo Compiling Roguelike RPG...
+echo Compiling Modular Roguelike RPG...
 
 REM Delete old executable if exists
 if exist roguelike.exe (
@@ -7,43 +7,44 @@ if exist roguelike.exe (
     del roguelike.exe
 )
 
+REM Clean old object files
+if exist src\*.o (
+    echo Cleaning object files...
+    del /Q src\*.o
+)
+
 REM Method 1: Working raylib path (C:/raylib/raylib/src)
-echo Compiling with raylib...
-gcc main.c -I"C:/raylib/raylib/src" -L"C:/raylib/raylib/src" -lraylib -lwinmm -lgdi32 -lopengl32 -o roguelike.exe
+echo Compiling modular source files...
+gcc -Wall -Wextra -std=c99 -O2 -I"C:/raylib/raylib/src" -Isrc -c src/main.c -o src/main.o
+gcc -Wall -Wextra -std=c99 -O2 -I"C:/raylib/raylib/src" -Isrc -c src/game_state.c -o src/game_state.o
+gcc -Wall -Wextra -std=c99 -O2 -I"C:/raylib/raylib/src" -Isrc -c src/player.c -o src/player.o
+gcc -Wall -Wextra -std=c99 -O2 -I"C:/raylib/raylib/src" -Isrc -c src/enemy.c -o src/enemy.o
+gcc -Wall -Wextra -std=c99 -O2 -I"C:/raylib/raylib/src" -Isrc -c src/dungeon.c -o src/dungeon.o
+gcc -Wall -Wextra -std=c99 -O2 -I"C:/raylib/raylib/src" -Isrc -c src/renderer.c -o src/renderer.o
+gcc -Wall -Wextra -std=c99 -O2 -I"C:/raylib/raylib/src" -Isrc -c src/resources.c -o src/resources.o
+
+echo Linking...
+gcc src/main.o src/game_state.o src/player.o src/enemy.o src/dungeon.o src/renderer.o src/resources.o -L"C:/raylib/raylib/src" -lraylib -lwinmm -lgdi32 -lopengl32 -o roguelike.exe
+
 if exist roguelike.exe (
-    echo Success! roguelike.exe created.
+    echo Success! Modular roguelike.exe created.
+    echo.
+    echo Code structure:
+    echo - src/main.c         - Entry point
+    echo - src/game_state.c   - Game management
+    echo - src/player.c       - Player logic
+    echo - src/enemy.c        - Enemy AI
+    echo - src/dungeon.c      - Map generation
+    echo - src/renderer.c     - Graphics
+    echo - src/resources.c    - Asset loading
     echo.
     echo Starting game...
     start roguelike.exe
     goto :end
 )
 
-REM Method 2: Global raylib installation
-echo Trying global raylib...
-gcc main.c -lraylib -lwinmm -lgdi32 -lopengl32 -o roguelike.exe 2>nul
-if exist roguelike.exe (
-    echo Success! roguelike.exe created.
-    echo Starting game...
-    start roguelike.exe
-    goto :end
-)
-
-REM Method 3: Local raylib folder
-echo Trying local raylib folder...
-gcc main.c -I./raylib/include -L./raylib/lib -lraylib -lwinmm -lgdi32 -lopengl32 -o roguelike.exe 2>nul
-if exist roguelike.exe (
-    echo Success! roguelike.exe created.
-    echo Starting game...
-    start roguelike.exe
-    goto :end
-)
-
-echo Error: Could not compile. Please check:
-echo 1. Is raylib properly installed?
-echo 2. Are the include and library paths correct?
-echo 3. Try using Visual Studio with tower_defense.vcxproj instead
-echo.
-echo For raylib installation, visit: https://github.com/raysan5/raylib/releases
+echo Error: Compilation failed
+echo Try: make all (if you have make installed)
 
 :end
 pause
