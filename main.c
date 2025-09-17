@@ -6,13 +6,15 @@
 
 #define SCREEN_WIDTH 1024
 #define SCREEN_HEIGHT 768
-#define GRID_WIDTH 20
-#define GRID_HEIGHT 15
-#define CELL_SIZE 32
-#define MAX_ENEMIES 20
-#define MAX_TOWERS 50
-#define MAX_BULLETS 100
-#define PI 3.14159265f
+#define TILE_SIZE 32
+#define MAP_WIDTH 30
+#define MAP_HEIGHT 20
+#define MAX_ENEMIES 50
+#define MAX_ITEMS 100
+
+#define TILE_FLOOR 0
+#define TILE_WALL 1
+#define TILE_DOOR 2
 
 typedef struct {
     float x, y;
@@ -20,488 +22,432 @@ typedef struct {
 
 typedef struct {
     Vector2f position;
-    float hp;
-    float maxHp;
-    int pathIndex;
+    int level;
+    int hp;
+    int maxHp;
+    int mana;
+    int maxMana;
+    int exp;
+    int expToNext;
+    int strength;
+    int defense;
+    int magic;
+    int gold;
+    bool alive;
+} Player;
+
+typedef struct {
+    Vector2f position;
+    int type;
+    int hp;
+    int maxHp;
+    int damage;
+    int expValue;
+    float speed;
+    float lastMove;
     bool active;
 } Enemy;
 
 typedef struct {
     Vector2f position;
-    Vector2f targetPos;
-    Vector2f velocity;
-    float range;
-    float damage;
-    float fireRate;
-    float lastShot;
-    float speed;
-    int team;
-    bool selected;
+    int type;
+    int value;
     bool active;
-    bool moving;
-} Unit;
+} Item;
 
 typedef struct {
-    Vector2f position;
-    Vector2f velocity;
-    float damage;
-    int targetId;
-    bool active;
-} Bullet;
-
-typedef struct {
-    Vector2f position;
-    int team;
-    float hp;
-    float maxHp;
-    bool active;
-} Building;
-
-typedef struct {
+    Player player;
     Enemy enemies[MAX_ENEMIES];
-    Unit units[MAX_TOWERS];
-    Building buildings[10];
-    Bullet bullets[MAX_BULLETS];
-    Vector2f path[10];
-    int pathLength;
-    int playerHp;
-    int gold;
-    int wood;
-    float enemySpawnTimer;
-    int wave;
-    Vector2f selectionStart;
-    Vector2f selectionEnd;
-    bool selecting;
+    Item items[MAX_ITEMS];
+    int map[MAP_HEIGHT][MAP_WIDTH];
+    int currentLevel;
+    bool gameOver;
+    float cameraX;
+    float cameraY;
+    Texture2D heroSprite;
 } GameState;
 
 GameState game = {0};
 
-Vector2f pathPoints[] = {
-    {0, 7}, {3, 7}, {3, 3}, {8, 3}, {8, 10}, {12, 10}, 
-    {12, 5}, {16, 5}, {16, 12}, {19, 12}
-};
+void AttackEnemy(int enemyId);
+
+void LoadSprites(void) {
+    game.heroSprite = LoadTexture("assets/heroes.png");
+    if (game.heroSprite.id > 0) {
+        SetTextureFilter(game.heroSprite, TEXTURE_FILTER_POINT);
+        printf("Hero sprite loaded successfully! Size: %dx%d\n", 
+               game.heroSprite.width, game.heroSprite.height);
+    } else {
+        printf("Failed to load hero sprite from assets/heroes.png\n");
+    }
+}
+
+void UnloadSprites(void) {
+    UnloadTexture(game.heroSprite);
+}
+
+void GenerateDungeon(void) {
+    for (int y = 0; y < MAP_HEIGHT; y++) {
+        for (int x = 0; x < MAP_WIDTH; x++) {
+            if (x == 0 || x == MAP_WIDTH - 1 || y == 0 || y == MAP_HEIGHT - 1) {
+                game.map[y][x] = TILE_WALL;
+            } else if ((x % 4 == 0 && y % 4 == 0) || GetRandomValue(0, 100) < 20) {
+                game.map[y][x] = TILE_WALL;
+            } else {
+                game.map[y][x] = TILE_FLOOR;
+            }
+        }
+    }
+}
+
+void SpawnEnemies(void) {
+    for (int i = 0; i < 5; i++) {
+        for (int j = 0; j < MAX_ENEMIES; j++) {
+            if (!game.enemies[j].active) {
+                int x, y;
+                do {
+                    x = GetRandomValue(1, MAP_WIDTH - 2);
+                    y = GetRandomValue(1, MAP_HEIGHT - 2);
+                } while (game.map[y][x] != TILE_FLOOR || 
+                        (abs(x - (int)game.player.position.x) < 3 && 
+                         abs(y - (int)game.player.position.y) < 3));
+                
+                game.enemies[j].position.x = x;
+                game.enemies[j].position.y = y;
+                game.enemies[j].type = GetRandomValue(0, 2);
+                game.enemies[j].hp = 30 + game.enemies[j].type * 20;
+                game.enemies[j].maxHp = game.enemies[j].hp;
+                game.enemies[j].damage = 5 + game.enemies[j].type * 5;
+                game.enemies[j].expValue = 10 + game.enemies[j].type * 5;
+                game.enemies[j].speed = 2.0f;
+                game.enemies[j].lastMove = 0;
+                game.enemies[j].active = true;
+                break;
+            }
+        }
+    }
+}
 
 void InitGame(void) {
-    game.playerHp = 10;
-    game.gold = 500;
-    game.wood = 300;
-    game.wave = 1;
-    game.enemySpawnTimer = 0;
-    game.pathLength = 10;
-    game.selecting = false;
+    game.player.position.x = MAP_WIDTH / 2;
+    game.player.position.y = MAP_HEIGHT / 2;
+    game.player.level = 1;
+    game.player.hp = 100;
+    game.player.maxHp = 100;
+    game.player.mana = 50;
+    game.player.maxMana = 50;
+    game.player.exp = 0;
+    game.player.expToNext = 100;
+    game.player.strength = 10;
+    game.player.defense = 5;
+    game.player.magic = 5;
+    game.player.gold = 0;
+    game.player.alive = true;
     
-    for (int i = 0; i < game.pathLength; i++) {
-        game.path[i] = pathPoints[i];
-    }
+    game.currentLevel = 1;
+    game.gameOver = false;
+    game.cameraX = 0;
+    game.cameraY = 0;
     
     for (int i = 0; i < MAX_ENEMIES; i++) {
         game.enemies[i].active = false;
     }
     
-    for (int i = 0; i < MAX_TOWERS; i++) {
-        game.units[i].active = false;
-        game.units[i].selected = false;
+    for (int i = 0; i < MAX_ITEMS; i++) {
+        game.items[i].active = false;
     }
     
-    for (int i = 0; i < 10; i++) {
-        game.buildings[i].active = false;
-    }
+    GenerateDungeon();
     
-    for (int i = 0; i < MAX_BULLETS; i++) {
-        game.bullets[i].active = false;
-    }
+    int startX, startY;
+    do {
+        startX = GetRandomValue(1, MAP_WIDTH - 2);
+        startY = GetRandomValue(1, MAP_HEIGHT - 2);
+    } while (game.map[startY][startX] != TILE_FLOOR);
     
-    game.buildings[0].position.x = 2 * CELL_SIZE + CELL_SIZE/2;
-    game.buildings[0].position.y = 2 * CELL_SIZE + CELL_SIZE/2;
-    game.buildings[0].team = 0;
-    game.buildings[0].hp = 1000;
-    game.buildings[0].maxHp = 1000;
-    game.buildings[0].active = true;
+    game.player.position.x = startX;
+    game.player.position.y = startY;
     
-    game.buildings[1].position.x = 17 * CELL_SIZE + CELL_SIZE/2;
-    game.buildings[1].position.y = 12 * CELL_SIZE + CELL_SIZE/2;
-    game.buildings[1].team = 1;
-    game.buildings[1].hp = 1000;
-    game.buildings[1].maxHp = 1000;
-    game.buildings[1].active = true;
-    
-    for (int i = 0; i < 3; i++) {
-        game.units[i].position.x = (3 + i) * CELL_SIZE + CELL_SIZE/2;
-        game.units[i].position.y = 4 * CELL_SIZE + CELL_SIZE/2;
-        game.units[i].targetPos = game.units[i].position;
-        game.units[i].range = 80;
-        game.units[i].damage = 25;
-        game.units[i].fireRate = 1.0f;
-        game.units[i].lastShot = 0;
-        game.units[i].speed = 60.0f;
-        game.units[i].team = 0;
-        game.units[i].selected = false;
-        game.units[i].active = true;
-        game.units[i].moving = false;
-    }
+    SpawnEnemies();
+    LoadSprites();
 }
 
-void SpawnEnemy(void) {
-    for (int i = 0; i < MAX_ENEMIES; i++) {
-        if (!game.enemies[i].active) {
-            game.enemies[i].position.x = game.path[0].x * CELL_SIZE + CELL_SIZE/2;
-            game.enemies[i].position.y = game.path[0].y * CELL_SIZE + CELL_SIZE/2;
-            game.enemies[i].hp = 50 + (game.wave * 10);
-            game.enemies[i].maxHp = game.enemies[i].hp;
-            game.enemies[i].pathIndex = 0;
-            game.enemies[i].active = true;
-            break;
+bool CanMoveTo(int x, int y) {
+    if (x < 0 || x >= MAP_WIDTH || y < 0 || y >= MAP_HEIGHT) return false;
+    return game.map[y][x] == TILE_FLOOR;
+}
+
+void MovePlayer(int dx, int dy) {
+    int newX = (int)game.player.position.x + dx;
+    int newY = (int)game.player.position.y + dy;
+    
+    if (CanMoveTo(newX, newY)) {
+        for (int i = 0; i < MAX_ENEMIES; i++) {
+            if (game.enemies[i].active && 
+                (int)game.enemies[i].position.x == newX && 
+                (int)game.enemies[i].position.y == newY) {
+                AttackEnemy(i);
+                return;
+            }
         }
-    }
-}
-
-void SelectUnits(Vector2f start, Vector2f end) {
-    float minX = fminf(start.x, end.x);
-    float maxX = fmaxf(start.x, end.x);
-    float minY = fminf(start.y, end.y);
-    float maxY = fmaxf(start.y, end.y);
-    
-    for (int i = 0; i < MAX_TOWERS; i++) {
-        if (!game.units[i].active || game.units[i].team != 0) continue;
         
-        if (game.units[i].position.x >= minX && game.units[i].position.x <= maxX &&
-            game.units[i].position.y >= minY && game.units[i].position.y <= maxY) {
-            game.units[i].selected = true;
-        }
+        game.player.position.x = newX;
+        game.player.position.y = newY;
     }
 }
 
-void MoveSelectedUnits(Vector2f target) {
-    int selectedCount = 0;
-    for (int i = 0; i < MAX_TOWERS; i++) {
-        if (game.units[i].active && game.units[i].selected && game.units[i].team == 0) {
-            selectedCount++;
-        }
-    }
+void AttackEnemy(int enemyId) {
+    if (!game.enemies[enemyId].active) return;
     
-    if (selectedCount == 0) return;
+    int damage = game.player.strength + GetRandomValue(-2, 2);
+    game.enemies[enemyId].hp -= damage;
     
-    float angle = 0;
-    float radius = 20;
-    for (int i = 0; i < MAX_TOWERS; i++) {
-        if (game.units[i].active && game.units[i].selected && game.units[i].team == 0) {
-            float offsetX = cosf(angle) * radius;
-            float offsetY = sinf(angle) * radius;
-            
-            game.units[i].targetPos.x = target.x + offsetX;
-            game.units[i].targetPos.y = target.y + offsetY;
-            game.units[i].moving = true;
-            
-            angle += (2.0f * PI) / selectedCount;
+    if (game.enemies[enemyId].hp <= 0) {
+        game.player.exp += game.enemies[enemyId].expValue;
+        game.player.gold += GetRandomValue(1, 5);
+        game.enemies[enemyId].active = false;
+        
+        if (game.player.exp >= game.player.expToNext) {
+            game.player.level++;
+            game.player.exp -= game.player.expToNext;
+            game.player.expToNext = game.player.level * 100;
+            game.player.maxHp += 20;
+            game.player.hp = game.player.maxHp;
+            game.player.strength += 2;
+            game.player.defense += 1;
         }
-    }
-}
-
-void FireBullet(int unitId, int enemyId) {
-    for (int i = 0; i < MAX_BULLETS; i++) {
-        if (!game.bullets[i].active) {
-            game.bullets[i].position = game.units[unitId].position;
-            
-            Vector2f direction = {
-                game.enemies[enemyId].position.x - game.units[unitId].position.x,
-                game.enemies[enemyId].position.y - game.units[unitId].position.y
-            };
-            
-            float length = sqrtf(direction.x * direction.x + direction.y * direction.y);
-            game.bullets[i].velocity.x = (direction.x / length) * 200;
-            game.bullets[i].velocity.y = (direction.y / length) * 200;
-            
-            game.bullets[i].damage = game.units[unitId].damage;
-            game.bullets[i].targetId = enemyId;
-            game.bullets[i].active = true;
-            break;
+    } else {
+        int enemyDamage = game.enemies[enemyId].damage - game.player.defense;
+        if (enemyDamage < 1) enemyDamage = 1;
+        game.player.hp -= enemyDamage;
+        
+        if (game.player.hp <= 0) {
+            game.player.alive = false;
+            game.gameOver = true;
         }
     }
 }
 
 void UpdateGame(void) {
+    if (game.gameOver) return;
+    
+    if (IsKeyPressed(KEY_UP) || IsKeyPressed(KEY_W)) {
+        MovePlayer(0, -1);
+    }
+    if (IsKeyPressed(KEY_DOWN) || IsKeyPressed(KEY_S)) {
+        MovePlayer(0, 1);
+    }
+    if (IsKeyPressed(KEY_LEFT) || IsKeyPressed(KEY_A)) {
+        MovePlayer(-1, 0);
+    }
+    if (IsKeyPressed(KEY_RIGHT) || IsKeyPressed(KEY_D)) {
+        MovePlayer(1, 0);
+    }
+    
     float deltaTime = GetFrameTime();
-    Vector2 mousePos = GetMousePosition();
-    
-    if (IsMouseButtonPressed(MOUSE_BUTTON_LEFT)) {
-        if (!IsKeyDown(KEY_LEFT_SHIFT)) {
-            for (int i = 0; i < MAX_TOWERS; i++) {
-                game.units[i].selected = false;
-            }
-        }
-        game.selectionStart.x = mousePos.x;
-        game.selectionStart.y = mousePos.y;
-        game.selecting = true;
-    }
-    
-    if (IsMouseButtonDown(MOUSE_BUTTON_LEFT) && game.selecting) {
-        game.selectionEnd.x = mousePos.x;
-        game.selectionEnd.y = mousePos.y;
-    }
-    
-    if (IsMouseButtonReleased(MOUSE_BUTTON_LEFT) && game.selecting) {
-        game.selectionEnd.x = mousePos.x;
-        game.selectionEnd.y = mousePos.y;
-        SelectUnits(game.selectionStart, game.selectionEnd);
-        game.selecting = false;
-    }
-    
-    if (IsMouseButtonPressed(MOUSE_BUTTON_RIGHT)) {
-        Vector2f target = {mousePos.x, mousePos.y};
-        MoveSelectedUnits(target);
-    }
-    
-    for (int i = 0; i < MAX_TOWERS; i++) {
-        if (!game.units[i].active) continue;
-        
-        if (game.units[i].moving) {
-            Vector2f direction = {
-                game.units[i].targetPos.x - game.units[i].position.x,
-                game.units[i].targetPos.y - game.units[i].position.y
-            };
-            
-            float distance = sqrtf(direction.x * direction.x + direction.y * direction.y);
-            
-            if (distance < 5.0f) {
-                game.units[i].moving = false;
-                game.units[i].position = game.units[i].targetPos;
-            } else {
-                game.units[i].position.x += (direction.x / distance) * game.units[i].speed * deltaTime;
-                game.units[i].position.y += (direction.y / distance) * game.units[i].speed * deltaTime;
-            }
-        }
-        
-        game.units[i].lastShot += deltaTime;
-        
-        if (game.units[i].lastShot >= game.units[i].fireRate) {
-            int closestEnemy = -1;
-            float closestDistance = game.units[i].range;
-            
-            for (int j = 0; j < MAX_ENEMIES; j++) {
-                if (!game.enemies[j].active) continue;
-                
-                float dx = game.enemies[j].position.x - game.units[i].position.x;
-                float dy = game.enemies[j].position.y - game.units[i].position.y;
-                float distance = sqrtf(dx * dx + dy * dy);
-                
-                if (distance < closestDistance) {
-                    closestDistance = distance;
-                    closestEnemy = j;
-                }
-            }
-            
-            for (int j = 0; j < MAX_TOWERS; j++) {
-                if (!game.units[j].active || game.units[j].team == game.units[i].team) continue;
-                
-                float dx = game.units[j].position.x - game.units[i].position.x;
-                float dy = game.units[j].position.y - game.units[i].position.y;
-                float distance = sqrtf(dx * dx + dy * dy);
-                
-                if (distance < closestDistance) {
-                    closestDistance = distance;
-                    closestEnemy = j + MAX_ENEMIES;
-                }
-            }
-            
-            if (closestEnemy != -1) {
-                if (closestEnemy < MAX_ENEMIES) {
-                    FireBullet(i, closestEnemy);
-                }
-                game.units[i].lastShot = 0;
-            }
-        }
-    }
-    
-    game.enemySpawnTimer += deltaTime;
-    if (game.enemySpawnTimer > 3.0f) {
-        SpawnEnemy();
-        game.enemySpawnTimer = 0;
-    }
     
     for (int i = 0; i < MAX_ENEMIES; i++) {
         if (!game.enemies[i].active) continue;
         
-        Vector2f target = {
-            game.path[game.enemies[i].pathIndex].x * CELL_SIZE + CELL_SIZE/2,
-            game.path[game.enemies[i].pathIndex].y * CELL_SIZE + CELL_SIZE/2
-        };
+        game.enemies[i].lastMove += deltaTime;
+        if (game.enemies[i].lastMove < game.enemies[i].speed) continue;
         
-        Vector2f direction = {
-            target.x - game.enemies[i].position.x,
-            target.y - game.enemies[i].position.y
-        };
+        game.enemies[i].lastMove = 0;
         
-        float distance = sqrtf(direction.x * direction.x + direction.y * direction.y);
+        int dx = 0, dy = 0;
+        float playerX = game.player.position.x;
+        float playerY = game.player.position.y;
         
-        if (distance < 5.0f) {
-            game.enemies[i].pathIndex++;
-            if (game.enemies[i].pathIndex >= game.pathLength) {
-                game.playerHp--;
-                game.enemies[i].active = false;
-                continue;
+        if (game.enemies[i].position.x < playerX) dx = 1;
+        else if (game.enemies[i].position.x > playerX) dx = -1;
+        
+        if (game.enemies[i].position.y < playerY) dy = 1;
+        else if (game.enemies[i].position.y > playerY) dy = -1;
+        
+        int newX = (int)game.enemies[i].position.x + dx;
+        int newY = (int)game.enemies[i].position.y + dy;
+        
+        if (newX == (int)playerX && newY == (int)playerY) {
+            int damage = game.enemies[i].damage - game.player.defense;
+            if (damage < 1) damage = 1;
+            game.player.hp -= damage;
+            
+            if (game.player.hp <= 0) {
+                game.player.alive = false;
+                game.gameOver = true;
             }
-        } else {
-            float speed = 50.0f;
-            game.enemies[i].position.x += (direction.x / distance) * speed * deltaTime;
-            game.enemies[i].position.y += (direction.y / distance) * speed * deltaTime;
+        } else if (CanMoveTo(newX, newY)) {
+            bool blocked = false;
+            for (int j = 0; j < MAX_ENEMIES; j++) {
+                if (j != i && game.enemies[j].active && 
+                    (int)game.enemies[j].position.x == newX && 
+                    (int)game.enemies[j].position.y == newY) {
+                    blocked = true;
+                    break;
+                }
+            }
+            
+            if (!blocked) {
+                game.enemies[i].position.x = newX;
+                game.enemies[i].position.y = newY;
+            }
         }
     }
     
-    for (int i = 0; i < MAX_BULLETS; i++) {
-        if (!game.bullets[i].active) continue;
-        
-        game.bullets[i].position.x += game.bullets[i].velocity.x * deltaTime;
-        game.bullets[i].position.y += game.bullets[i].velocity.y * deltaTime;
-        
-        if (game.bullets[i].targetId >= 0 && game.enemies[game.bullets[i].targetId].active) {
-            float dx = game.bullets[i].position.x - game.enemies[game.bullets[i].targetId].position.x;
-            float dy = game.bullets[i].position.y - game.enemies[game.bullets[i].targetId].position.y;
-            float distance = sqrtf(dx * dx + dy * dy);
-            
-            if (distance < 8.0f) {
-                game.enemies[game.bullets[i].targetId].hp -= game.bullets[i].damage;
-                
-                if (game.enemies[game.bullets[i].targetId].hp <= 0) {
-                    game.gold += 20;
-                    game.enemies[game.bullets[i].targetId].active = false;
-                }
-                
-                game.bullets[i].active = false;
-            }
-        }
-        
-        if (game.bullets[i].position.x < 0 || game.bullets[i].position.x > SCREEN_WIDTH ||
-            game.bullets[i].position.y < 0 || game.bullets[i].position.y > SCREEN_HEIGHT) {
-            game.bullets[i].active = false;
-        }
-    }
+    game.cameraX = game.player.position.x * TILE_SIZE - SCREEN_WIDTH / 2;
+    game.cameraY = game.player.position.y * TILE_SIZE - SCREEN_HEIGHT / 2;
+    
+    if (game.cameraX < 0) game.cameraX = 0;
+    if (game.cameraY < 0) game.cameraY = 0;
+    if (game.cameraX > MAP_WIDTH * TILE_SIZE - SCREEN_WIDTH) 
+        game.cameraX = MAP_WIDTH * TILE_SIZE - SCREEN_WIDTH;
+    if (game.cameraY > MAP_HEIGHT * TILE_SIZE - SCREEN_HEIGHT) 
+        game.cameraY = MAP_HEIGHT * TILE_SIZE - SCREEN_HEIGHT;
 }
 
 void DrawGame(void) {
     BeginDrawing();
-    ClearBackground(DARKGREEN);
+    ClearBackground(BLACK);
     
-    for (int x = 0; x <= GRID_WIDTH; x++) {
-        DrawLine(x * CELL_SIZE, 0, x * CELL_SIZE, GRID_HEIGHT * CELL_SIZE, DARKGRAY);
-    }
-    for (int y = 0; y <= GRID_HEIGHT; y++) {
-        DrawLine(0, y * CELL_SIZE, GRID_WIDTH * CELL_SIZE, y * CELL_SIZE, DARKGRAY);
-    }
+    BeginMode2D((Camera2D){{0, 0}, {-game.cameraX, -game.cameraY}, 0, 1.0f});
     
-    for (int i = 0; i < game.pathLength; i++) {
-        int x = game.path[i].x * CELL_SIZE;
-        int y = game.path[i].y * CELL_SIZE;
-        DrawRectangle(x, y, CELL_SIZE, CELL_SIZE, BROWN);
-    }
-    
-    for (int i = 0; i < 10; i++) {
-        if (!game.buildings[i].active) continue;
-        
-        Color buildingColor = game.buildings[i].team == 0 ? BLUE : MAROON;
-        DrawRectangle(
-            game.buildings[i].position.x - CELL_SIZE,
-            game.buildings[i].position.y - CELL_SIZE,
-            CELL_SIZE * 2, CELL_SIZE * 2, buildingColor
-        );
-        
-        float hpPercent = game.buildings[i].hp / game.buildings[i].maxHp;
-        DrawRectangle(
-            game.buildings[i].position.x - CELL_SIZE,
-            game.buildings[i].position.y - CELL_SIZE - 8,
-            CELL_SIZE * 2, 6, DARKGRAY
-        );
-        DrawRectangle(
-            game.buildings[i].position.x - CELL_SIZE,
-            game.buildings[i].position.y - CELL_SIZE - 8,
-            (CELL_SIZE * 2) * hpPercent, 6, GREEN
-        );
-    }
-    
-    for (int i = 0; i < MAX_TOWERS; i++) {
-        if (!game.units[i].active) continue;
-        
-        Color unitColor = game.units[i].team == 0 ? GREEN : RED;
-        
-        if (game.units[i].selected) {
-            DrawCircleLines(game.units[i].position.x, game.units[i].position.y, 20, YELLOW);
-        }
-        
-        DrawCircle(game.units[i].position.x, game.units[i].position.y, 8, unitColor);
-        
-        if (game.units[i].moving && game.units[i].selected) {
-            DrawCircleLines(game.units[i].targetPos.x, game.units[i].targetPos.y, 5, WHITE);
-            DrawLine(game.units[i].position.x, game.units[i].position.y,
-                    game.units[i].targetPos.x, game.units[i].targetPos.y, WHITE);
+    for (int y = 0; y < MAP_HEIGHT; y++) {
+        for (int x = 0; x < MAP_WIDTH; x++) {
+            Color tileColor;
+            switch (game.map[y][x]) {
+                case TILE_FLOOR:
+                    tileColor = (Color){64, 64, 64, 255};
+                    break;
+                case TILE_WALL:
+                    tileColor = (Color){32, 32, 32, 255};
+                    break;
+                default:
+                    tileColor = BLACK;
+                    break;
+            }
+            
+            DrawRectangle(x * TILE_SIZE, y * TILE_SIZE, TILE_SIZE, TILE_SIZE, tileColor);
+            DrawRectangleLines(x * TILE_SIZE, y * TILE_SIZE, TILE_SIZE, TILE_SIZE, 
+                             (Color){48, 48, 48, 255});
         }
     }
     
     for (int i = 0; i < MAX_ENEMIES; i++) {
         if (!game.enemies[i].active) continue;
         
-        DrawCircle(game.enemies[i].position.x, game.enemies[i].position.y, 12, PURPLE);
+        Color enemyColor;
+        switch (game.enemies[i].type) {
+            case 0: enemyColor = RED; break;
+            case 1: enemyColor = PURPLE; break;
+            case 2: enemyColor = MAROON; break;
+            default: enemyColor = RED; break;
+        }
         
-        float hpPercent = game.enemies[i].hp / game.enemies[i].maxHp;
+        DrawCircle(
+            game.enemies[i].position.x * TILE_SIZE + TILE_SIZE/2,
+            game.enemies[i].position.y * TILE_SIZE + TILE_SIZE/2,
+            TILE_SIZE/3, enemyColor
+        );
+        
+        float hpPercent = (float)game.enemies[i].hp / game.enemies[i].maxHp;
+        int barWidth = TILE_SIZE - 4;
         DrawRectangle(
-            game.enemies[i].position.x - 15,
-            game.enemies[i].position.y - 20,
-            30, 4, DARKGRAY
+            game.enemies[i].position.x * TILE_SIZE + 2,
+            game.enemies[i].position.y * TILE_SIZE - 6,
+            barWidth, 4, DARKGRAY
         );
         DrawRectangle(
-            game.enemies[i].position.x - 15,
-            game.enemies[i].position.y - 20,
-            30 * hpPercent, 4, RED
+            game.enemies[i].position.x * TILE_SIZE + 2,
+            game.enemies[i].position.y * TILE_SIZE - 6,
+            barWidth * hpPercent, 4, RED
         );
     }
     
-    for (int i = 0; i < MAX_BULLETS; i++) {
-        if (!game.bullets[i].active) continue;
-        DrawCircle(game.bullets[i].position.x, game.bullets[i].position.y, 3, YELLOW);
+    Rectangle heroSrc = {0, 0, 32, 32};
+    Rectangle heroDest = {
+        game.player.position.x * TILE_SIZE,
+        game.player.position.y * TILE_SIZE,
+        TILE_SIZE, TILE_SIZE
+    };
+    
+    if (game.heroSprite.id > 0) {
+        DrawTexturePro(game.heroSprite, heroSrc, heroDest, (Vector2){0, 0}, 0.0f, WHITE);
+        static bool debugPrinted = false;
+        if (!debugPrinted) {
+            printf("Drawing hero sprite at (%d, %d)\n", 
+                   (int)(game.player.position.x * TILE_SIZE), 
+                   (int)(game.player.position.y * TILE_SIZE));
+            debugPrinted = true;
+        }
+    } else {
+        DrawRectangle(
+            game.player.position.x * TILE_SIZE,
+            game.player.position.y * TILE_SIZE,
+            TILE_SIZE, TILE_SIZE, BLUE
+        );
     }
     
-    if (game.selecting) {
-        float x = fminf(game.selectionStart.x, game.selectionEnd.x);
-        float y = fminf(game.selectionStart.y, game.selectionEnd.y);
-        float width = fabsf(game.selectionEnd.x - game.selectionStart.x);
-        float height = fabsf(game.selectionEnd.y - game.selectionStart.y);
-        
-        DrawRectangleLines(x, y, width, height, WHITE);
-        DrawRectangle(x, y, width, height, Fade(WHITE, 0.1f));
+    EndMode2D();
+    
+    DrawRectangle(10, 10, 200, 120, Fade(BLACK, 0.7f));
+    DrawRectangleLines(10, 10, 200, 120, WHITE);
+    
+    DrawText(TextFormat("Level: %d", game.player.level), 20, 20, 16, WHITE);
+    DrawText(TextFormat("HP: %d/%d", game.player.hp, game.player.maxHp), 20, 40, 16, RED);
+    DrawText(TextFormat("MP: %d/%d", game.player.mana, game.player.maxMana), 20, 60, 16, BLUE);
+    DrawText(TextFormat("EXP: %d/%d", game.player.exp, game.player.expToNext), 20, 80, 16, GREEN);
+    DrawText(TextFormat("Gold: %d", game.player.gold), 20, 100, 16, GOLD);
+    
+    DrawRectangle(10, 140, 200, 80, Fade(BLACK, 0.7f));
+    DrawRectangleLines(10, 140, 200, 80, WHITE);
+    
+    DrawText("Stats:", 20, 150, 16, WHITE);
+    DrawText(TextFormat("STR: %d", game.player.strength), 20, 170, 14, WHITE);
+    DrawText(TextFormat("DEF: %d", game.player.defense), 100, 170, 14, WHITE);
+    DrawText(TextFormat("MAG: %d", game.player.magic), 20, 190, 14, WHITE);
+    DrawText(TextFormat("Floor: %d", game.currentLevel), 100, 190, 14, WHITE);
+    
+    DrawText("WASD/Arrows - Move", 10, SCREEN_HEIGHT - 80, 14, LIGHTGRAY);
+    DrawText("Move into enemy to attack", 10, SCREEN_HEIGHT - 60, 14, LIGHTGRAY);
+    DrawText("R - Restart", 10, SCREEN_HEIGHT - 40, 14, LIGHTGRAY);
+    
+    if (game.heroSprite.id > 0) {
+        DrawText(TextFormat("Hero sprite loaded: %dx%d", 
+                          game.heroSprite.width, game.heroSprite.height), 
+                10, SCREEN_HEIGHT - 20, 12, GREEN);
+    } else {
+        DrawText("Hero sprite: FAILED to load assets/heroes.png", 10, SCREEN_HEIGHT - 20, 12, RED);
     }
     
-    DrawText(TextFormat("Gold: %d", game.gold), GRID_WIDTH * CELL_SIZE + 10, 20, 20, GOLD);
-    DrawText(TextFormat("Wood: %d", game.wood), GRID_WIDTH * CELL_SIZE + 10, 50, 20, BROWN);
-    DrawText(TextFormat("HP: %d", game.playerHp), GRID_WIDTH * CELL_SIZE + 10, 80, 20, WHITE);
-    DrawText(TextFormat("Wave: %d", game.wave), GRID_WIDTH * CELL_SIZE + 10, 110, 20, WHITE);
-    
-    DrawText("Controls:", GRID_WIDTH * CELL_SIZE + 10, 150, 16, WHITE);
-    DrawText("LMB - Select units", GRID_WIDTH * CELL_SIZE + 10, 170, 14, LIGHTGRAY);
-    DrawText("RMB - Move selected", GRID_WIDTH * CELL_SIZE + 10, 190, 14, LIGHTGRAY);
-    DrawText("Shift+LMB - Add to selection", GRID_WIDTH * CELL_SIZE + 10, 210, 14, LIGHTGRAY);
-    
-    if (game.playerHp <= 0) {
-        DrawText("GAME OVER", SCREEN_WIDTH/2 - 100, SCREEN_HEIGHT/2, 36, RED);
-        DrawText("Press R to restart", SCREEN_WIDTH/2 - 80, SCREEN_HEIGHT/2 + 40, 20, WHITE);
+    if (game.gameOver) {
+        DrawRectangle(0, 0, SCREEN_WIDTH, SCREEN_HEIGHT, Fade(BLACK, 0.8f));
+        DrawText("GAME OVER", SCREEN_WIDTH/2 - 120, SCREEN_HEIGHT/2 - 50, 48, RED);
+        DrawText(TextFormat("You reached level %d", game.player.level), 
+                SCREEN_WIDTH/2 - 100, SCREEN_HEIGHT/2, 20, WHITE);
+        DrawText("Press R to restart", SCREEN_WIDTH/2 - 80, SCREEN_HEIGHT/2 + 30, 20, WHITE);
     }
     
     EndDrawing();
 }
 
 int main(void) {
-    InitWindow(SCREEN_WIDTH, SCREEN_HEIGHT, "Simple RTS Strategy");
+    InitWindow(SCREEN_WIDTH, SCREEN_HEIGHT, "Roguelike RPG");
     SetTargetFPS(60);
     
     InitGame();
     
     while (!WindowShouldClose()) {
-        if (game.playerHp > 0) {
+        if (!game.gameOver) {
             UpdateGame();
         } else if (IsKeyPressed(KEY_R)) {
+            UnloadSprites();
             InitGame();
         }
         
         DrawGame();
     }
     
+    UnloadSprites();
     CloseWindow();
     return 0;
 }
