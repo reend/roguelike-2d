@@ -7,8 +7,8 @@
 #define SCREEN_WIDTH 1024
 #define SCREEN_HEIGHT 768
 #define TILE_SIZE 32
-#define MAP_WIDTH 30
-#define MAP_HEIGHT 20
+#define MAP_WIDTH 32
+#define MAP_HEIGHT 24
 #define MAX_ENEMIES 50
 #define MAX_ITEMS 100
 
@@ -335,19 +335,51 @@ void DrawGame(void) {
     for (int i = 0; i < MAX_ENEMIES; i++) {
         if (!game.enemies[i].active) continue;
         
-        Color enemyColor;
+        Rectangle enemySrc;
+        Color enemyTint = WHITE;
+        
         switch (game.enemies[i].type) {
-            case 0: enemyColor = RED; break;
-            case 1: enemyColor = PURPLE; break;
-            case 2: enemyColor = MAROON; break;
-            default: enemyColor = RED; break;
+            case 0: 
+                enemySrc = (Rectangle){32, 0, 32, 32}; // Второй персонаж
+                enemyTint = WHITE;
+                break;
+            case 1: 
+                enemySrc = (Rectangle){64, 0, 32, 32}; // Третий персонаж
+                enemyTint = (Color){255, 200, 200, 255}; // Слегка красноватый
+                break;
+            case 2: 
+                enemySrc = (Rectangle){96, 0, 32, 32}; // Четвертый персонаж
+                enemyTint = (Color){200, 200, 255, 255}; // Слегка синеватый
+                break;
+            default: 
+                enemySrc = (Rectangle){32, 0, 32, 32};
+                enemyTint = WHITE;
+                break;
         }
         
-        DrawCircle(
-            game.enemies[i].position.x * TILE_SIZE + TILE_SIZE/2,
-            game.enemies[i].position.y * TILE_SIZE + TILE_SIZE/2,
-            TILE_SIZE/3, enemyColor
-        );
+        Rectangle enemyDest = {
+            game.enemies[i].position.x * TILE_SIZE,
+            game.enemies[i].position.y * TILE_SIZE,
+            TILE_SIZE, TILE_SIZE
+        };
+        
+        if (game.heroSprite.id > 0) {
+            DrawTexturePro(game.heroSprite, enemySrc, enemyDest, (Vector2){0, 0}, 0.0f, enemyTint);
+        } else {
+            Color enemyColor;
+            switch (game.enemies[i].type) {
+                case 0: enemyColor = RED; break;
+                case 1: enemyColor = PURPLE; break;
+                case 2: enemyColor = MAROON; break;
+                default: enemyColor = RED; break;
+            }
+            
+            DrawCircle(
+                game.enemies[i].position.x * TILE_SIZE + TILE_SIZE/2,
+                game.enemies[i].position.y * TILE_SIZE + TILE_SIZE/2,
+                TILE_SIZE/3, enemyColor
+            );
+        }
         
         float hpPercent = (float)game.enemies[i].hp / game.enemies[i].maxHp;
         int barWidth = TILE_SIZE - 4;
