@@ -1,4 +1,5 @@
 #include "dungeon.h"
+#include "dungeon_helpers.h"
 #include <stdlib.h>
 
 void GenerateDungeon(void) {
@@ -16,22 +17,18 @@ void GenerateDungeon(void) {
 }
 
 void PlacePlayerInDungeon(void) {
-    int startX, startY;
-    int attempts = 0;
+    PositionList validPositions = FindValidPlayerPositions();
     
-    do {
-        startX = GetRandomValue(1, MAP_WIDTH - 2);
-        startY = GetRandomValue(1, MAP_HEIGHT - 2);
-        attempts++;
-    } while (game.map[startY][startX] != TILE_FLOOR && attempts < 100);
-    
-    if (attempts < 100) {
-        game.player.position.x = startX;
-        game.player.position.y = startY;
+    if (validPositions.count > 0) {
+        Position playerPos = GetRandomPosition(&validPositions);
+        game.player.position.x = playerPos.x;
+        game.player.position.y = playerPos.y;
     } else {
         game.player.position.x = MAP_WIDTH / 2;
         game.player.position.y = MAP_HEIGHT / 2;
     }
+    
+    FreePositionList(&validPositions);
 }
 
 bool IsWalkable(int x, int y) {

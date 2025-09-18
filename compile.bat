@@ -24,9 +24,10 @@ gcc -Wall -Wextra -std=c99 -O2 -I"C:/raylib/raylib/src" -Isrc -c src/renderer.c 
 gcc -Wall -Wextra -std=c99 -O2 -I"C:/raylib/raylib/src" -Isrc -c src/resources.c -o src/resources.o
 gcc -Wall -Wextra -std=c99 -O2 -I"C:/raylib/raylib/src" -Isrc -c src/player_stats.c -o src/player_stats.o
 gcc -Wall -Wextra -std=c99 -O2 -I"C:/raylib/raylib/src" -Isrc -c src/render_helpers.c -o src/render_helpers.o
+gcc -Wall -Wextra -std=c99 -O2 -I"C:/raylib/raylib/src" -Isrc -c src/dungeon_helpers.c -o src/dungeon_helpers.o
 
 echo Linking...
-gcc src/main.o src/game_state.o src/player.o src/enemy.o src/dungeon.o src/renderer.o src/resources.o src/player_stats.o src/render_helpers.o -L"C:/raylib/raylib/src" -lraylib -lwinmm -lgdi32 -lopengl32 -o roguelike.exe
+gcc src/main.o src/game_state.o src/player.o src/enemy.o src/dungeon.o src/renderer.o src/resources.o src/player_stats.o src/render_helpers.o src/dungeon_helpers.o -L"C:/raylib/raylib/src" -lraylib -lwinmm -lgdi32 -lopengl32 -o roguelike.exe
 
 if exist roguelike.exe (
     echo Success! Modular roguelike.exe created.
@@ -41,6 +42,7 @@ if exist roguelike.exe (
     echo - src/resources.c    - Asset loading
     echo - src/player_stats.c - Player statistics
     echo - src/render_helpers.c - Rendering utilities
+    echo - src/dungeon_helpers.c - Optimized position finding
     echo.
     echo Starting game...
     start roguelike.exe

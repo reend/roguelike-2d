@@ -2,6 +2,7 @@
 #include "player.h"
 #include "player_stats.h"
 #include "constants.h"
+#include "dungeon_helpers.h"
 #include <stdlib.h>
 #include <math.h>
 
@@ -31,24 +32,29 @@ void SpawnEnemyAt(int x, int y, int type) {
 }
 
 void SpawnEnemies(void) {
-    for (int i = 0; i < INITIAL_ENEMY_COUNT; i++) {
-        int x, y;
-        int attempts = 0;
-        
-        do {
-            x = GetRandomValue(1, MAP_WIDTH - 2);
-            y = GetRandomValue(1, MAP_HEIGHT - 2);
-            attempts++;
-        } while ((game.map[y][x] != TILE_FLOOR || 
-                 (abs(x - (int)game.player.position.x) < PLAYER_DISTANCE_FROM_ENEMIES && 
-                  abs(y - (int)game.player.position.y) < PLAYER_DISTANCE_FROM_ENEMIES)) && 
-                 attempts < MAX_SPAWN_ATTEMPTS);
-        
-        if (attempts < MAX_SPAWN_ATTEMPTS) {
+    PositionList validPositions = FindValidEnemyPositions(
+        (int)game.player.position.x, 
+        (int)game.player.position.y
+    );
+    
+    int enemiesToSpawn = (validPositions.count < INITIAL_ENEMY_COUNT) 
+                        ? validPositions.count 
+                        : INITIAL_ENEMY_COUNT;
+    
+    for (int i = 0; i < enemiesToSpawn; i++) {
+        if (validPositions.count > 0) {
+            int randomIndex = GetRandomValue(0, validPositions.count - 1);
+            Position enemyPos = validPositions.positions[randomIndex];
+            
+            validPositions.positions[randomIndex] = validPositions.positions[validPositions.count - 1];
+            validPositions.count--;
+            
             int type = GetRandomValue(0, 2);
-            SpawnEnemyAt(x, y, type);
+            SpawnEnemyAt(enemyPos.x, enemyPos.y, type);
         }
     }
+    
+    FreePositionList(&validPositions);
 }
 
 void UpdateEnemies(void) {
