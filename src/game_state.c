@@ -4,7 +4,6 @@
 #include "dungeon.h"
 #include "renderer.h"
 #include "resources.h"
-#include "combat.h"
 
 GameState game = {0};
 
@@ -13,14 +12,18 @@ void InitGame(void) {
     
     game.currentLevel = 1;
     game.gameOver = false;
+    game.playerTurn = true;
     game.cameraX = 0;
     game.cameraY = 0;
     
     InitEnemies();
-    InitCombatSystems();
     
     for (int i = 0; i < MAX_ITEMS; i++) {
         game.items[i].active = false;
+    }
+    
+    for (int i = 0; i < MAX_MESSAGES; i++) {
+        game.messages[i].active = false;
     }
     
     GenerateDungeon();
@@ -32,12 +35,8 @@ void InitGame(void) {
 void UpdateGame(void) {
     if (game.gameOver) return;
     
-    float deltaTime = GetFrameTime();
-    
     HandlePlayerInput();
-    UpdateEnemies(deltaTime);
-    UpdateProjectiles(deltaTime);
-    UpdateEffects(deltaTime);
+    UpdateEnemies();
     UpdateGameCamera();
 }
 

@@ -98,18 +98,6 @@ void DrawEnemies(void) {
             barWidth * hpPercent, 4, RED
         );
         
-        if (game.selectedEnemy == i) {
-            DrawCircleLines(
-                game.enemies[i].position.x * TILE_SIZE + TILE_SIZE/2,
-                game.enemies[i].position.y * TILE_SIZE + TILE_SIZE/2,
-                TILE_SIZE/2 + 4, YELLOW
-            );
-            DrawCircleLines(
-                game.enemies[i].position.x * TILE_SIZE + TILE_SIZE/2,
-                game.enemies[i].position.y * TILE_SIZE + TILE_SIZE/2,
-                TILE_SIZE/2 + 6, GOLD
-            );
-        }
     }
 }
 
@@ -152,17 +140,9 @@ void DrawUI(void) {
     DrawText(TextFormat("Floor: %d", game.currentLevel), 100, 190, 14, WHITE);
     
     DrawText("WASD/Arrows - Move", 10, SCREEN_HEIGHT - 100, 14, LIGHTGRAY);
-    DrawText("Left Click - Select Enemy", 10, SCREEN_HEIGHT - 80, 14, LIGHTGRAY);
-    DrawText("Right Click - Shoot at Selected", 10, SCREEN_HEIGHT - 60, 14, LIGHTGRAY);
+    DrawText(game.playerTurn ? "Your Turn" : "Enemy Turn", 10, SCREEN_HEIGHT - 80, 14, game.playerTurn ? GREEN : RED);
     DrawText("R - Restart", 10, SCREEN_HEIGHT - 40, 14, LIGHTGRAY);
     
-    if (game.selectedEnemy != -1 && game.selectedEnemy < MAX_ENEMIES && 
-        game.enemies[game.selectedEnemy].active) {
-        Enemy* target = &game.enemies[game.selectedEnemy];
-        DrawText(TextFormat("Target: HP %d/%d DMG %d", 
-                target->hp, target->maxHp, target->damage), 
-                10, SCREEN_HEIGHT - 120, 14, YELLOW);
-    }
     
     if (game.heroSprite.id > 0) {
         DrawText(TextFormat("Hero sprite loaded: %dx%d", 
@@ -173,54 +153,15 @@ void DrawUI(void) {
     }
 }
 
-void DrawProjectiles(void) {
-    for (int i = 0; i < MAX_PROJECTILES; i++) {
-        if (!game.projectiles[i].active) continue;
+void DrawMessages(void) {
+    for (int i = 0; i < MAX_MESSAGES; i++) {
+        if (!game.messages[i].active) continue;
         
-        Vector2 start = {
-            game.projectiles[i].start.x * TILE_SIZE + TILE_SIZE/2,
-            game.projectiles[i].start.y * TILE_SIZE + TILE_SIZE/2
-        };
-        Vector2 current = {
-            game.projectiles[i].current.x * TILE_SIZE + TILE_SIZE/2,
-            game.projectiles[i].current.y * TILE_SIZE + TILE_SIZE/2
-        };
-        
-        DrawLineEx(start, current, 3.0f, game.projectiles[i].color);
-        DrawCircle(current.x, current.y, 4, game.projectiles[i].color);
-        DrawCircle(current.x, current.y, 2, WHITE);
+        int y = 250 + i * 20;
+        DrawText(game.messages[i].text, 20, y, 16, game.messages[i].color);
     }
 }
 
-void DrawEffects(void) {
-    for (int i = 0; i < MAX_EFFECTS; i++) {
-        if (!game.effects[i].active) continue;
-        
-        Vector2 center = {
-            game.effects[i].position.x * TILE_SIZE + TILE_SIZE/2,
-            game.effects[i].position.y * TILE_SIZE + TILE_SIZE/2
-        };
-        
-        switch (game.effects[i].type) {
-            case 0:
-                DrawCircleGradient(center.x, center.y, game.effects[i].size, 
-                                 game.effects[i].color, Fade(game.effects[i].color, 0));
-                break;
-            case 1:
-                DrawRing(center, game.effects[i].size - 4, game.effects[i].size, 
-                        0, 360, 8, game.effects[i].color);
-                DrawCircleGradient(center.x, center.y, game.effects[i].size/2, 
-                                 game.effects[i].color, Fade(game.effects[i].color, 0));
-                break;
-            case 2:
-                DrawCircleGradient(center.x, center.y, game.effects[i].size, 
-                                 game.effects[i].color, Fade(RED, 0));
-                DrawRing(center, game.effects[i].size/2, game.effects[i].size, 
-                        0, 360, 16, ORANGE);
-                break;
-        }
-    }
-}
 
 void DrawGame(void) {
     BeginDrawing();
@@ -231,12 +172,11 @@ void DrawGame(void) {
     DrawDungeon();
     DrawEnemies();
     DrawPlayer();
-    DrawProjectiles();
-    DrawEffects();
     
     EndMode2D();
     
     DrawUI();
+    DrawMessages();
     
     if (game.gameOver) {
         DrawRectangle(0, 0, SCREEN_WIDTH, SCREEN_HEIGHT, Fade(BLACK, 0.8f));

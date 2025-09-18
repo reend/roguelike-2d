@@ -5,7 +5,7 @@
 
 void InitEnemies(void);
 void SpawnEnemies(void);
-void UpdateEnemies(float deltaTime);
+void UpdateEnemies(void);
 void SpawnEnemyAt(int x, int y, int type);
 
 #endif
