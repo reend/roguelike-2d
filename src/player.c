@@ -39,6 +39,7 @@ bool MovePlayer(int dx, int dy) {
 
 
 void AttackEnemy(int enemyId) {
+    if (enemyId < 0 || enemyId >= MAX_ENEMIES) return;
     if (!game.enemies[enemyId].active) return;
     
     int damage = game.player.strength + GetRandomValue(-MELEE_DAMAGE_VARIANCE, MELEE_DAMAGE_VARIANCE);

@@ -12,6 +12,9 @@ void InitEnemies(void) {
 }
 
 void SpawnEnemyAt(int x, int y, int type) {
+    if (x < 0 || x >= MAP_WIDTH || y < 0 || y >= MAP_HEIGHT) return;
+    if (type < 0) type = 0;
+    
     for (int i = 0; i < MAX_ENEMIES; i++) {
         if (!game.enemies[i].active) {
             game.enemies[i].position.x = x;

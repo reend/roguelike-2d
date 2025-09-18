@@ -6,7 +6,8 @@ TARGET = roguelike.exe
 
 SRCDIR = src
 SOURCES = $(SRCDIR)/main.c $(SRCDIR)/game_state.c $(SRCDIR)/player.c $(SRCDIR)/enemy.c \
-          $(SRCDIR)/dungeon.c $(SRCDIR)/renderer.c $(SRCDIR)/resources.c $(SRCDIR)/player_stats.c
+          $(SRCDIR)/dungeon.c $(SRCDIR)/renderer.c $(SRCDIR)/resources.c $(SRCDIR)/player_stats.c \
+          $(SRCDIR)/render_helpers.c
 
 OBJECTS = $(SOURCES:.c=.o)
 
