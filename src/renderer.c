@@ -48,8 +48,8 @@ void DrawEnemies(void) {
         SpriteInfo spriteInfo = GetEnemySpriteInfo(game.enemies[i].type);
         Rectangle enemyDest = {enemyX, enemyY, TILE_SIZE, TILE_SIZE};
         
-        if (game.heroSprite.id > 0) {
-            DrawTexturePro(game.heroSprite, spriteInfo.sourceRect, enemyDest, 
+        if (game.enemySprite.id > 0) {
+            DrawTexturePro(game.enemySprite, spriteInfo.sourceRect, enemyDest, 
                           (Vector2){0, 0}, 0.0f, spriteInfo.tint);
         } else {
             Color enemyColor = GetEnemyColor(game.enemies[i].type);

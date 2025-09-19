@@ -23,7 +23,7 @@ void InitHeroTypes(void) {
     heroTypes[HERO_MAGE].baseStrength = 6;
     heroTypes[HERO_MAGE].baseDefense = 4;
     heroTypes[HERO_MAGE].baseMagic = 15;
-    heroTypes[HERO_MAGE].spriteX = 128;
+    heroTypes[HERO_MAGE].spriteX = 32;
 
     strcpy(heroTypes[HERO_ROGUE].name, "Rogue");
     strcpy(heroTypes[HERO_ROGUE].description, "Agile assassin with balanced stats and speed");
@@ -32,7 +32,7 @@ void InitHeroTypes(void) {
     heroTypes[HERO_ROGUE].baseStrength = 12;
     heroTypes[HERO_ROGUE].baseDefense = 6;
     heroTypes[HERO_ROGUE].baseMagic = 8;
-    heroTypes[HERO_ROGUE].spriteX = 160;
+    heroTypes[HERO_ROGUE].spriteX = 64;
 
     strcpy(heroTypes[HERO_PALADIN].name, "Paladin");
     strcpy(heroTypes[HERO_PALADIN].description, "Holy warrior with balanced combat and magic");
@@ -41,7 +41,7 @@ void InitHeroTypes(void) {
     heroTypes[HERO_PALADIN].baseStrength = 11;
     heroTypes[HERO_PALADIN].baseDefense = 7;
     heroTypes[HERO_PALADIN].baseMagic = 10;
-    heroTypes[HERO_PALADIN].spriteX = 192;
+    heroTypes[HERO_PALADIN].spriteX = 96;
 }
 
 void StartHeroSelection(void) {

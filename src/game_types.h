@@ -91,6 +91,7 @@ typedef struct {
     float cameraX;
     float cameraY;
     Texture2D heroSprite;
+    Texture2D enemySprite;
     bool inHeroSelection;
     int selectedHeroIndex;
 } GameState;
