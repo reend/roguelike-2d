@@ -2,6 +2,7 @@
 #include "render_helpers.h"
 #include "ui_constants.h"
 #include "graphics_constants.h"
+#include "hero_selection.h"
 
 void UpdateGameCamera(void) {
     game.cameraX = game.player.position.x * TILE_SIZE - SCREEN_WIDTH / 2;
@@ -47,12 +48,12 @@ void DrawEnemies(void) {
         SpriteInfo spriteInfo = GetEnemySpriteInfo(game.enemies[i].type);
         Rectangle enemyDest = {enemyX, enemyY, TILE_SIZE, TILE_SIZE};
         
-        if (game.heroSprite.id > 0) {
-            DrawTexturePro(game.heroSprite, spriteInfo.sourceRect, enemyDest, 
+        if (game.enemySprite.id > 0) {
+            DrawTexturePro(game.enemySprite, spriteInfo.sourceRect, enemyDest, 
                           (Vector2){0, 0}, 0.0f, spriteInfo.tint);
         } else {
             Color enemyColor = GetEnemyColor(game.enemies[i].type);
-            DrawCircle(enemyX + TILE_SIZE/2, enemyY + TILE_SIZE/2, TILE_SIZE/3, enemyColor);
+            DrawCircle(enemyX + TILE_SIZE/ENEMY_CIRCLE_CENTER_DIVISOR, enemyY + TILE_SIZE/ENEMY_CIRCLE_CENTER_DIVISOR, TILE_SIZE/ENEMY_CIRCLE_RADIUS_DIVISOR, enemyColor);
         }
         
         DrawHealthBar(enemyX, enemyY, game.enemies[i].hp, game.enemies[i].maxHp);
@@ -60,7 +61,10 @@ void DrawEnemies(void) {
 }
 
 void DrawPlayer(void) {
-    Rectangle heroSrc = {PLAYER_SPRITE_X, SPRITE_Y, SPRITE_SIZE, SPRITE_SIZE};
+    HeroType* heroType = GetHeroType(game.player.heroType);
+    int spriteX = heroType ? heroType->spriteX : PLAYER_SPRITE_X;
+    
+    Rectangle heroSrc = {spriteX, SPRITE_Y, SPRITE_SIZE, SPRITE_SIZE};
     Rectangle heroDest = {
         game.player.position.x * TILE_SIZE,
         game.player.position.y * TILE_SIZE,
@@ -115,11 +119,11 @@ void DrawGame(void) {
     DrawMessages();
     
     if (game.gameOver) {
-        DrawRectangle(0, 0, SCREEN_WIDTH, SCREEN_HEIGHT, Fade(BLACK, 0.8f));
-        DrawText("GAME OVER", SCREEN_WIDTH/2 - 120, SCREEN_HEIGHT/2 - 50, 48, RED);
+        DrawRectangle(0, 0, SCREEN_WIDTH, SCREEN_HEIGHT, Fade(BLACK, GAME_OVER_OVERLAY_ALPHA));
+        DrawText("GAME OVER", SCREEN_WIDTH/2 - GAME_OVER_TITLE_OFFSET_X, SCREEN_HEIGHT/2 - GAME_OVER_TITLE_OFFSET_Y, GAME_OVER_TITLE_FONT_SIZE, RED);
         DrawText(TextFormat("You reached level %d", game.player.level), 
-                SCREEN_WIDTH/2 - 100, SCREEN_HEIGHT/2, 20, WHITE);
-        DrawText("Press R to restart", SCREEN_WIDTH/2 - 80, SCREEN_HEIGHT/2 + 30, 20, WHITE);
+                SCREEN_WIDTH/2 - GAME_OVER_LEVEL_OFFSET_X, SCREEN_HEIGHT/2 + GAME_OVER_LEVEL_OFFSET_Y, GAME_OVER_TEXT_FONT_SIZE, WHITE);
+        DrawText("Press R to restart", SCREEN_WIDTH/2 - GAME_OVER_RESTART_OFFSET_X, SCREEN_HEIGHT/2 + GAME_OVER_RESTART_OFFSET_Y, GAME_OVER_TEXT_FONT_SIZE, WHITE);
     }
     
     EndDrawing();

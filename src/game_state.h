@@ -4,6 +4,7 @@
 #include "game_types.h"
 
 void InitGame(void);
+void StartActualGame(void);
 void UpdateGame(void);
 void RestartGame(void);
 
