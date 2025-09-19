@@ -2,6 +2,7 @@
 #include "game_state.h"
 #include "renderer.h"
 #include "resources.h"
+#include "hero_selection.h"
 
 int main(void) {
     InitWindow(SCREEN_WIDTH, SCREEN_HEIGHT, "Roguelike RPG");
@@ -16,7 +17,11 @@ int main(void) {
             RestartGame();
         }
         
-        DrawGame();
+        if (game.inHeroSelection) {
+            DrawHeroSelection();
+        } else {
+            DrawGame();
+        }
     }
     
     UnloadSprites();

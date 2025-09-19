@@ -4,10 +4,17 @@
 #include "dungeon.h"
 #include "renderer.h"
 #include "resources.h"
+#include "hero_selection.h"
 
 GameState game = {0};
 
 void InitGame(void) {
+    LoadSprites();
+    InitHeroTypes();
+    StartHeroSelection();
+}
+
+void StartActualGame(void) {
     InitPlayer();
     
     game.currentLevel = 1;
@@ -29,10 +36,17 @@ void InitGame(void) {
     GenerateDungeon();
     PlacePlayerInDungeon();
     SpawnEnemies();
-    LoadSprites();
 }
 
 void UpdateGame(void) {
+    if (game.inHeroSelection) {
+        UpdateHeroSelection();
+        if (!game.inHeroSelection) {
+            StartActualGame();
+        }
+        return;
+    }
+    
     if (game.gameOver) return;
     
     HandlePlayerInput();

@@ -2,6 +2,7 @@
 #include "render_helpers.h"
 #include "ui_constants.h"
 #include "graphics_constants.h"
+#include "hero_selection.h"
 
 void UpdateGameCamera(void) {
     game.cameraX = game.player.position.x * TILE_SIZE - SCREEN_WIDTH / 2;
@@ -60,7 +61,10 @@ void DrawEnemies(void) {
 }
 
 void DrawPlayer(void) {
-    Rectangle heroSrc = {PLAYER_SPRITE_X, SPRITE_Y, SPRITE_SIZE, SPRITE_SIZE};
+    HeroType* heroType = GetHeroType(game.player.heroType);
+    int spriteX = heroType ? heroType->spriteX : PLAYER_SPRITE_X;
+    
+    Rectangle heroSrc = {spriteX, SPRITE_Y, SPRITE_SIZE, SPRITE_SIZE};
     Rectangle heroDest = {
         game.player.position.x * TILE_SIZE,
         game.player.position.y * TILE_SIZE,

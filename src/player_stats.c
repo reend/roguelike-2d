@@ -3,15 +3,8 @@
 
 void InitPlayerStats(void) {
     game.player.level = 1;
-    game.player.hp = PLAYER_BASE_HP;
-    game.player.maxHp = PLAYER_BASE_HP;
-    game.player.mana = PLAYER_BASE_MANA;
-    game.player.maxMana = PLAYER_BASE_MANA;
     game.player.exp = 0;
     game.player.expToNext = PLAYER_BASE_EXP_TO_NEXT;
-    game.player.strength = PLAYER_BASE_STRENGTH;
-    game.player.defense = PLAYER_BASE_DEFENSE;
-    game.player.magic = PLAYER_BASE_MAGIC;
     game.player.gold = 0;
     game.player.alive = true;
 }
