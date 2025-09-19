@@ -1,6 +1,7 @@
 #include "hero_selection.h"
 #include "player_stats.h"
 #include "raylib.h"
+#include "hero_ui_constants.h"
 #include <string.h>
 #include <stdio.h>
 
@@ -70,13 +71,13 @@ void DrawHeroSelection(void) {
     BeginDrawing();
     ClearBackground(BLACK);
 
-    DrawText("SELECT YOUR HERO", SCREEN_WIDTH/2 - 150, 50, 32, WHITE);
-    DrawText("Use ARROW KEYS or A/D to select, ENTER/SPACE to confirm", SCREEN_WIDTH/2 - 280, 100, 16, GRAY);
+    DrawText("SELECT YOUR HERO", SCREEN_WIDTH/2 - HERO_SELECTION_TITLE_OFFSET_X, HERO_SELECTION_TITLE_Y, HERO_SELECTION_TITLE_FONT_SIZE, WHITE);
+    DrawText("Use ARROW KEYS or A/D to select, ENTER/SPACE to confirm", SCREEN_WIDTH/2 - HERO_SELECTION_INSTRUCTIONS_OFFSET_X, HERO_SELECTION_INSTRUCTIONS_Y, HERO_SELECTION_INSTRUCTIONS_FONT_SIZE, GRAY);
 
-    int heroWidth = 200;
-    int heroHeight = 300;
+    int heroWidth = HERO_PANEL_WIDTH;
+    int heroHeight = HERO_PANEL_HEIGHT;
     int startX = (SCREEN_WIDTH - MAX_HERO_TYPES * heroWidth) / 2;
-    int startY = 150;
+    int startY = HERO_PANEL_START_Y;
 
     for (int i = 0; i < MAX_HERO_TYPES; i++) {
         int x = startX + i * heroWidth;
@@ -85,18 +86,18 @@ void DrawHeroSelection(void) {
         Color panelColor = (i == game.selectedHeroIndex) ? DARKBLUE : DARKGRAY;
         Color borderColor = (i == game.selectedHeroIndex) ? BLUE : GRAY;
         
-        DrawRectangle(x, y, heroWidth - 10, heroHeight, panelColor);
-        DrawRectangleLines(x, y, heroWidth - 10, heroHeight, borderColor);
+        DrawRectangle(x, y, heroWidth - HERO_PANEL_BORDER_OFFSET, heroHeight, panelColor);
+        DrawRectangleLines(x, y, heroWidth - HERO_PANEL_BORDER_OFFSET, heroHeight, borderColor);
 
         if (game.heroSprite.id > 0) {
-            Rectangle src = {heroTypes[i].spriteX, 0, 32, 32};
-            Rectangle dest = {x + (heroWidth - 10 - 64) / 2, y + 20, 64, 64};
+            Rectangle src = {heroTypes[i].spriteX, 0, HERO_SPRITE_SOURCE_SIZE, HERO_SPRITE_SOURCE_SIZE};
+            Rectangle dest = {x + (heroWidth - HERO_PANEL_BORDER_OFFSET - HERO_SPRITE_DISPLAY_SIZE) / 2, y + HERO_SPRITE_Y_OFFSET, HERO_SPRITE_DISPLAY_SIZE, HERO_SPRITE_DISPLAY_SIZE};
             DrawTexturePro(game.heroSprite, src, dest, (Vector2){0, 0}, 0.0f, WHITE);
         } else {
-            DrawRectangle(x + (heroWidth - 10 - 64) / 2, y + 20, 64, 64, BLUE);
+            DrawRectangle(x + (heroWidth - HERO_PANEL_BORDER_OFFSET - HERO_SPRITE_DISPLAY_SIZE) / 2, y + HERO_SPRITE_Y_OFFSET, HERO_SPRITE_DISPLAY_SIZE, HERO_SPRITE_DISPLAY_SIZE, BLUE);
         }
 
-        DrawText(heroTypes[i].name, x + 10, y + 100, 20, WHITE);
+        DrawText(heroTypes[i].name, x + HERO_PANEL_PADDING, y + HERO_NAME_Y_OFFSET, HERO_NAME_FONT_SIZE, WHITE);
         
         char stats[256];
         snprintf(stats, sizeof(stats), 
@@ -104,14 +105,14 @@ void DrawHeroSelection(void) {
                 heroTypes[i].baseHp, heroTypes[i].baseMana,
                 heroTypes[i].baseStrength, heroTypes[i].baseDefense, 
                 heroTypes[i].baseMagic);
-        DrawText(stats, x + 10, y + 130, 14, LIGHTGRAY);
+        DrawText(stats, x + HERO_PANEL_PADDING, y + HERO_STATS_Y_OFFSET, HERO_STATS_FONT_SIZE, LIGHTGRAY);
 
-        int descY = y + 230;
-        int lineHeight = 16;
+        int descY = y + HERO_DESCRIPTION_Y_OFFSET;
+        int lineHeight = HERO_DESCRIPTION_LINE_HEIGHT;
         char* desc = heroTypes[i].description;
-        int maxWidth = heroWidth - 30;
+        int maxWidth = heroWidth - HERO_DESCRIPTION_PADDING;
         
-        char line[64];
+        char line[HERO_DESCRIPTION_LINE_BUFFER_SIZE];
         int lineStart = 0;
         int lineEnd = 0;
         
@@ -119,7 +120,7 @@ void DrawHeroSelection(void) {
             int lineLen = 0;
             lineStart = lineEnd;
             
-            while (desc[lineEnd] != '\0' && lineLen < maxWidth/8 && desc[lineEnd] != '\n') {
+            while (desc[lineEnd] != '\0' && lineLen < maxWidth/HERO_DESCRIPTION_CHARS_PER_PIXEL && desc[lineEnd] != '\n') {
                 if (desc[lineEnd] == ' ') {
                     int nextWordLen = 0;
                     int tempEnd = lineEnd + 1;

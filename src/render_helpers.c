@@ -76,10 +76,10 @@ void DrawGameStats(void) {
     DrawText("Stats:", x, y, UI_TEXT_SIZE, WHITE);
     y += UI_LINE_HEIGHT;
     DrawText(TextFormat("STR: %d", game.player.strength), x, y, UI_SMALL_TEXT_SIZE, WHITE);
-    DrawText(TextFormat("DEF: %d", game.player.defense), x + 80, y, UI_SMALL_TEXT_SIZE, WHITE);
+    DrawText(TextFormat("DEF: %d", game.player.defense), x + STATS_SECOND_COLUMN_OFFSET, y, UI_SMALL_TEXT_SIZE, WHITE);
     y += UI_LINE_HEIGHT;
     DrawText(TextFormat("MAG: %d", game.player.magic), x, y, UI_SMALL_TEXT_SIZE, WHITE);
-    DrawText(TextFormat("Floor: %d", game.currentLevel), x + 80, y, UI_SMALL_TEXT_SIZE, WHITE);
+    DrawText(TextFormat("Floor: %d", game.currentLevel), x + STATS_SECOND_COLUMN_OFFSET, y, UI_SMALL_TEXT_SIZE, WHITE);
 }
 
 void DrawControlsHelp(void) {

@@ -1,11 +1,12 @@
 #include "player.h"
 #include "player_stats.h"
 #include "constants.h"
+#include "game_constants.h"
 #include <stdlib.h>
 
 void InitPlayer(void) {
-    game.player.position.x = MAP_WIDTH / 2;
-    game.player.position.y = MAP_HEIGHT / 2;
+    game.player.position.x = MAP_WIDTH / MAP_CENTER_DIVISOR;
+    game.player.position.y = MAP_HEIGHT / MAP_CENTER_DIVISOR;
     InitPlayerStats();
 }
 
@@ -62,16 +63,16 @@ void HandlePlayerInput(void) {
     bool moved = false;
     
     if (IsKeyPressed(KEY_UP) || IsKeyPressed(KEY_W)) {
-        moved = MovePlayer(0, -1);
+        moved = MovePlayer(MOVE_UP_X, MOVE_UP_Y);
     }
     else if (IsKeyPressed(KEY_DOWN) || IsKeyPressed(KEY_S)) {
-        moved = MovePlayer(0, 1);
+        moved = MovePlayer(MOVE_DOWN_X, MOVE_DOWN_Y);
     }
     else if (IsKeyPressed(KEY_LEFT) || IsKeyPressed(KEY_A)) {
-        moved = MovePlayer(-1, 0);
+        moved = MovePlayer(MOVE_LEFT_X, MOVE_LEFT_Y);
     }
     else if (IsKeyPressed(KEY_RIGHT) || IsKeyPressed(KEY_D)) {
-        moved = MovePlayer(1, 0);
+        moved = MovePlayer(MOVE_RIGHT_X, MOVE_RIGHT_Y);
     }
     
     if (moved) {
